@@ -26,8 +26,25 @@ AC_CHECK_LIB([intl], [libintl_dgettext])
 AC_CHECK_LIB([intl], [dgettext])
 
 # pthread
-AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR([pthread is missing])])
-CFLAGS="$CFLAGS -pthread"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <pthread.h>]], [[pthread_create(NULL, NULL, NULL, NULL);]])],
+[have_pthread="yes"], [have_pthread="no"])
+
+if test "$have_pthread" = "yes"; then
+    AC_DEFINE([HAVE_LIBPTHREAD], [1], [Define if pthread is available])
+else
+    AC_MSG_ERROR([pthread is missing])
+fi
+
+case "$(ldd --version 2>&1)" in
+    *musl*) musl=true ;;
+    *) musl=false ;;
+esac
+
+if $musl; then
+    CFLAGS="$CFLAGS"  # No need to add -pthread in musl
+else
+    CFLAGS="$CFLAGS -pthread"
+fi
 
 # DEBUG
 AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[Create a debug build. Default is disabled])],[debug="$enableval"],[debug=no])
